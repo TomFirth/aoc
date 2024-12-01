@@ -26,12 +26,18 @@ createColumns('./1.txt')
     }
   })
   .then(({ a, b }) => {
-    let total: number = 0;
+    let totalA: number = 0;
+    let totalB: number = 0;
     for (let i = 0; i < a.length; i++) {
       let left = a[i];
-      let right = b[i]
-      if (left > right) total += left - right;
-      else total += right - left;
+      let right = b[i];
+      if (left > right) totalA += left - right;
+      else totalA += right - left;
     }
-    console.log("Day 1, Part 1:", total);
+    a.map(num => {
+      const count = b.filter(x => x === num).length;
+      if (count > 0) totalB += num * count;
+    });
+    console.log("Day 1, Part 1:", totalA);
+    console.log("Day 1, Part 2:", totalB);
   });
