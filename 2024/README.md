@@ -1,1 +1,1 @@
-npx ts-node day.ts
+npm run day x
