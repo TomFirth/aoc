@@ -1,10 +1,15 @@
 import * as fs from "fs";
 const data: string = fs.readFileSync("3.txt", "utf-8");
 
-const regex = /mul\((\d{1,3}),(\d{1,3})\)/g;
+const regex: RegExp = /mul\((\d{1,3}),(\d{1,3})\)/g;
 
-const matches = [];
-let match;
+interface MulMatch {
+  firstNumber: number;
+  secondNumber: number;
+}
+
+const matches: MulMatch[] = [];
+let match: RegExpExecArray | null;
 
 while ((match = regex.exec(data)) !== null) {
   matches.push({
@@ -13,7 +18,7 @@ while ((match = regex.exec(data)) !== null) {
   });
 }
 
-const totalA = matches.reduce((sum, match) => {
+const totalA: number = matches.reduce((sum: number, match: MulMatch) => {
   return sum + (match.firstNumber * match.secondNumber);
 }, 0);
 
