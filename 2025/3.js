@@ -1,68 +1,64 @@
-import * as fs from 'fs';
-import * as readline from 'readline';
+import * as fs from "fs";
+import * as readline from "readline";
 
 let totalPart1 = 0;
 let totalPart2 = 0n;
 
 const rl = readline.createInterface({
-  input: fs.createReadStream('./3.txt'),
+  input: fs.createReadStream("./3.txt"),
   crlfDelay: Infinity,
 });
 
 const getHighestPair = (bank) => {
-  const digits = bank.split('').map(Number);
+  const digits = bank.split("").map(Number);
 
   for (let tens = 9; tens >= 0; tens--) {
-    const i = digits.indexOf(tens);
-    if (i === -1) continue;
+    const tensIndex = digits.indexOf(tens);
+    if (tensIndex === -1) continue;
 
     for (let units = 9; units >= 0; units--) {
-      for (let j = i + 1; j < digits.length; j++) {
-        if (digits[j] === units) {
-          return tens * 10 + units;
-        }
+      const unitsIndex = digits.indexOf(units, tensIndex + 1);
+      if (unitsIndex !== -1) {
+        return tens * 10 + units;
       }
     }
   }
-
   return -1;
 };
 
 const getBest12 = (bank) => {
-  const digits = bank.split('').map(Number);
-  const need = 12;
-  const keep = [];
+  const digits = bank.split("").map(Number);
+  const result = [];
 
-  let start = 0;
-  for (let k = need; k > 0; k--) {
-    const end = digits.length - k;
+  let searchStart = 0;
+  const selectCount = 12;
 
-    let bestDigit = -1;
-    let bestIndex = -1;
+  for (let remaining = selectCount; remaining > 0; remaining--) {
+    const lastSearchIndex = digits.length - remaining;
 
-    for (let i = start; i <= end; i++) {
-      if (digits[i] > bestDigit) {
-        bestDigit = digits[i];
-        bestIndex = i;
-      }
-    }
+    const { index: bestIndex, digit: bestDigit } = digits
+      .slice(searchStart, lastSearchIndex + 1)
+      .reduce(
+        (best, digit, localIdx) =>
+          digit > best.digit
+            ? { index: searchStart + localIdx, digit }
+            : best,
+        { index: -1, digit: -1 }
+      );
 
-    keep.push(bestDigit);
-    start = bestIndex + 1;
+    result.push(bestDigit);
+    searchStart = bestIndex + 1;
   }
 
-  return BigInt(keep.join(""));
+  return BigInt(result.join(""));
 };
 
 for await (const raw of rl) {
   const bank = raw.trim();
   if (!bank) continue;
 
-  const highestPair = getHighestPair(bank);
-  totalPart1 += highestPair;
-
-  const best12 = getBest12(bank);
-  totalPart2 += best12;
+  totalPart1 += getHighestPair(bank);
+  totalPart2 += getBest12(bank);
 }
 
 console.log("Day3, Part 1:", totalPart1);
