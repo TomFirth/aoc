@@ -5,60 +5,107 @@ import * as readline from "readline";
 type Range = [bigint, bigint];
 
 async function main(): Promise<void> {
-  const rl = readline.createInterface({
-    input: fs.createReadStream("./5.txt"),
-    crlfDelay: Infinity,
-  });
+    const file = fs.createReadStream("./5.txt");
 
-  const ranges: Range[] = [];
-  const available: bigint[] = [];
+    const rl = readline.createInterface({
+        input: file,
+        crlfDelay: Infinity
+    });
 
-  let readingRanges = true;
+    const ranges: Range[] = [];
+    const available: bigint[] = [];
 
-  for await (const raw of rl) {
-    const line = raw.trim();
+    let readingRanges = true;
 
-    if (!line) {
-      readingRanges = false;
-      continue;
+    for await (const line of rl) {
+        const trimmedLine = line.trim();
+
+        if (trimmedLine === "") {
+            readingRanges = false;
+            continue;
+        }
+
+        if (readingRanges) {
+            const parts = trimmedLine.split("-");
+
+            const start = BigInt(parts[0]);
+            const end = BigInt(parts[1]);
+
+            ranges.push([start, end]);
+        } else {
+            const id = BigInt(trimmedLine);
+            available.push(id);
+        }
     }
 
-    if (readingRanges) {
-      const [start, end] = line.split("-").map(BigInt);
-      ranges.push([start, end]);
-    } else {
-      available.push(BigInt(line));
+    let freshCount = 0;
+
+    for (const id of available) {
+        let fresh = false;
+
+        for (const range of ranges) {
+            const start = range[0];
+            const end = range[1];
+
+            if (id >= start && id <= end) {
+                fresh = true;
+                break;
+            }
+        }
+
+        if (fresh) {
+            freshCount++;
+        }
     }
-  }
 
-  const isFresh = (id: bigint): boolean =>
-    ranges.some(([start, end]) => id >= start && id <= end);
+    ranges.sort((a, b) => {
+        if (a[0] < b[0]) {
+            return -1;
+        }
 
-  const totalPart1 = available.filter(isFresh).length;
+        if (a[0] > b[0]) {
+            return 1;
+        }
 
-  const sortedRanges = [...ranges].sort((a, b) =>
-    a[0] < b[0] ? -1 : a[0] > b[0] ? 1 : 0
-  );
+        return 0;
+    });
 
-  const mergedRanges: Range[] = [];
+    const mergedRanges: Range[] = [];
 
-  for (const [start, end] of sortedRanges) {
-    const last = mergedRanges[mergedRanges.length - 1];
+    for (const range of ranges) {
+        const start = range[0];
+        const end = range[1];
 
-    if (last && start <= last[1] + 1n) {
-      last[1] = last[1] > end ? last[1] : end;
-    } else {
-      mergedRanges.push([start, end]);
+        if (mergedRanges.length === 0) {
+            mergedRanges.push([start, end]);
+            continue;
+        }
+
+        const lastRange = mergedRanges[mergedRanges.length - 1];
+        const lastEnd = lastRange[1];
+
+        if (start <= lastEnd + 1n) {
+            if (end > lastEnd) {
+                lastRange[1] = end;
+            }
+        } else {
+            mergedRanges.push([start, end]);
+        }
     }
-  }
 
-  const totalPart2 = mergedRanges.reduce(
-    (total, [start, end]) => total + (end - start + 1n),
-    0n
-  );
+    let totalFreshIds = 0n;
 
-  console.log("Day 5, Part 1:", totalPart1);
-  console.log("Day 5, Part 2:", totalPart2.toString());
+    for (const range of mergedRanges) {
+        const start = range[0];
+        const end = range[1];
+
+        const rangeSize = end - start + 1n;
+
+        totalFreshIds += rangeSize;
+    }
+
+    console.log("Day 5, Part 1:", freshCount);
+    console.log("Day 5, Part 2:", totalFreshIds.toString());
 }
 
 main();

@@ -3,97 +3,138 @@ import * as fs from "fs";
 import * as readline from "readline";
 
 async function main(): Promise<void> {
-  const rl = readline.createInterface({
-    input: fs.createReadStream("./6.txt"),
-    crlfDelay: Infinity,
-  });
+    const rl = readline.createInterface({
+        input: fs.createReadStream("./6.txt"),
+        crlfDelay: Infinity
+    });
 
-  const rows: string[] = [];
+    const rows: string[] = [];
 
-  for await (const raw of rl) {
-    if (raw.length > 0) rows.push(raw);
-  }
-
-  const operationRow = rows.pop()!;
-  const numberRows = rows;
-
-  const width = Math.max(
-    operationRow.length,
-    ...numberRows.map(row => row.length)
-  );
-
-  // Pad rows so every character position exists.
-  const paddedRows = numberRows.map(row => row.padEnd(width));
-  const paddedOperations = operationRow.padEnd(width);
-
-  // Identify problem boundaries using completely blank columns.
-  const problems: [number, number][] = [];
-  let start = -1;
-
-  for (let c = 0; c < width; c++) {
-    const isBlank = paddedRows.every(row => row[c] === " ");
-
-    if (!isBlank && start === -1) {
-      start = c;
+    for await (const line of rl) {
+        if (line.length > 0) {
+            rows.push(line);
+        }
     }
 
-    if (isBlank && start !== -1) {
-      problems.push([start, c - 1]);
-      start = -1;
-    }
-  }
+    const operationRow = rows.pop()!;
+    const numberRows = rows;
 
-  if (start !== -1) {
-    problems.push([start, width - 1]);
-  }
+    let width = operationRow.length;
 
-  let totalPart1 = 0n;
-  let totalPart2 = 0n;
-
-  for (const [start, end] of problems) {
-    // Find the operator anywhere underneath this problem.
-    const operator = paddedOperations
-      .slice(start, end + 1)
-      .split("")
-      .find(char => char === "+" || char === "*");
-
-    if (!operator) throw new Error(`Missing operator at column ${start}`);
-
-    // Part 1: Read numbers horizontally.
-    const horizontalNumbers = paddedRows
-      .map(row => row.slice(start, end + 1).trim())
-      .filter(value => value.length > 0)
-      .map(BigInt);
-
-    const resultPart1 = operator === "*"
-      ? horizontalNumbers.reduce((a, b) => a * b, 1n)
-      : horizontalNumbers.reduce((a, b) => a + b, 0n);
-
-    totalPart1 += resultPart1;
-
-    // Part 2: Read numbers vertically, right-to-left.
-    const verticalNumbers: bigint[] = [];
-
-    for (let c = end; c >= start; c--) {
-      const digits = paddedRows
-        .map(row => row[c])
-        .join("")
-        .trim();
-
-      if (digits.length > 0) {
-        verticalNumbers.push(BigInt(digits));
-      }
+    for (const row of numberRows) {
+        if (row.length > width) {
+            width = row.length;
+        }
     }
 
-    const resultPart2 = operator === "*"
-      ? verticalNumbers.reduce((a, b) => a * b, 1n)
-      : verticalNumbers.reduce((a, b) => a + b, 0n);
+    const paddedRows = numberRows.map(row => row.padEnd(width));
+    const paddedOperations = operationRow.padEnd(width);
 
-    totalPart2 += resultPart2;
-  }
+    const problems: [number, number][] = [];
+    let start = -1;
 
-  console.log("Day 6, Part 1:", totalPart1.toString());
-  console.log("Day 6, Part 2:", totalPart2.toString());
+    for (let column = 0; column < width; column++) {
+        let blankColumn = true;
+
+        for (const row of paddedRows) {
+            if (row[column] !== " ") {
+                blankColumn = false;
+                break;
+            }
+        }
+
+        if (!blankColumn && start === -1) {
+            start = column;
+        }
+
+        if (blankColumn && start !== -1) {
+            problems.push([start, column - 1]);
+            start = -1;
+        }
+    }
+
+    if (start !== -1) {
+        problems.push([start, width - 1]);
+    }
+
+    function calculate(numbers: bigint[], operator: string): bigint {
+        let result = operator === "*" ? 1n : 0n;
+
+        for (const number of numbers) {
+            if (operator === "*") {
+                result *= number;
+            } else {
+                result += number;
+            }
+        }
+
+        return result;
+    }
+
+    function getOperator(start: number, end: number): string {
+        for (let column = start; column <= end; column++) {
+            const character = paddedOperations[column];
+
+            if (character === "+" || character === "*") {
+                return character;
+            }
+        }
+
+        throw new Error(`Missing operator at column ${start}`);
+    }
+
+    function getHorizontalNumbers(start: number, end: number): bigint[] {
+        const numbers: bigint[] = [];
+
+        for (const row of paddedRows) {
+            const value = row.slice(start, end + 1).trim();
+
+            if (value !== "") {
+                numbers.push(BigInt(value));
+            }
+        }
+
+        return numbers;
+    }
+
+    function getVerticalNumbers(start: number, end: number): bigint[] {
+        const numbers: bigint[] = [];
+
+        for (let column = end; column >= start; column--) {
+            let digits = "";
+
+            for (const row of paddedRows) {
+                digits += row[column];
+            }
+
+            digits = digits.trim();
+
+            if (digits !== "") {
+                numbers.push(BigInt(digits));
+            }
+        }
+
+        return numbers;
+    }
+
+    let totalPart1 = 0n;
+    let totalPart2 = 0n;
+
+    for (const problem of problems) {
+        const startColumn = problem[0];
+        const endColumn = problem[1];
+
+        const operator = getOperator(startColumn, endColumn);
+
+        const horizontalNumbers = getHorizontalNumbers(startColumn, endColumn);
+        const verticalNumbers = getVerticalNumbers(startColumn, endColumn);
+
+        totalPart1 += calculate(horizontalNumbers, operator);
+        totalPart2 += calculate(verticalNumbers, operator);
+    }
+
+    console.log("Day 6, Part 1:", totalPart1.toString());
+    console.log("Day 6, Part 2:", totalPart2.toString());
 }
 
 main();
